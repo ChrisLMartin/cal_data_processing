@@ -20,7 +20,7 @@ output_excel_filename = 'CalorimetryData2018Automated.xlsx'
 output_excel_location = os.path.normpath(
         'S:/Current Projects/R&D/{}'.format(output_excel_filename))
 #output_excel_location = os.path.normpath(
-#        'C:/Users/christopher.martin/Documents/Python/cal_data_processing/CalorimetryData2018Automated.xlsx')
+#        'C:/Users/christopher.martin/Documents/Python/cal_data/CalorimetryData2018Automated.xlsx')
 
 # Parse command line file arguments, used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
