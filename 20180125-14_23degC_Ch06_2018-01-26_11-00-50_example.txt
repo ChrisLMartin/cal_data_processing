@@ -1,0 +1,43 @@
+Sample ID	20180125-14
+Channel No	06
+Mix Time	26-Jan-2018  11:00:59
+Sample Mass, g	250.000
+Water Mass, g	300.000
+Cement Type	
+Cement Mass, g	0.000
+Suppl 1 Type	Slag
+Suppl 1 Mass, g	600.000
+Suppl 2 Type	Fly Ash
+Suppl 2 Mass, g	200.000
+SO3 Carrier Type	
+SO3 Carrier Mass, g	0.000
+Aggr Type	Med sand 900, Fine sand, 100
+Aggr Mass, g	1000.000
+Admix Dose	admixture values
+Comment	Mix temp 30 C, Atm temp 25 C
+Company Name	company name
+Instrument Type	ICal 8000
+Instrument S/N	00000000
+Temp Control	On
+Set Temp, °C	23.0
+Calibr Name	00000000
+Calibr Date	01-Jan-2000
+Filename	20180125-14_23°C_Ch06_2018-01-26_11-00-50
+Start Time	26-Jan-2018  11:00:50
+Stop Time	26-Jan-2018  11:12:31
+Stab Time, hh:mm	00:00
+Baseline Override, V	NaN
+
+Tlog,s	Voltage,V	Power,W	Heat,J
+
+0	1.052E-3	1.378E-2	4.108E-1
+60	1.039E-3	1.361E-2	1.232E+0
+120	1.027E-3	1.346E-2	2.044E+0
+180	1.016E-3	1.332E-2	2.848E+0
+240	1.005E-3	1.319E-2	3.643E+0
+300	9.960E-4	1.308E-2	4.431E+0
+360	9.876E-4	1.298E-2	5.213E+0
+420	9.808E-4	1.290E-2	5.989E+0
+480	9.742E-4	1.282E-2	6.761E+0
+540	9.687E-4	1.275E-2	7.528E+0
+600	9.638E-4	1.269E-2	8.291E+0

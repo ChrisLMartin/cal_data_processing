@@ -31,7 +31,6 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     # Tab delimited cal data file location for pandas to read
     # may be worth converting all cal files held in script directory,
     # or selecting only files that haven't been converted
-    # network directory "//ICAL8000/Users/Public/Documents/Calmetrix/CalCommander 2/Export/YYYY-MM/"
 
     # import data from file, and split parameters from recorded data.
     # Encoding set to latin1 due to presence of degree symbol in data
@@ -46,8 +45,6 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     df_val_params = pd.DataFrame(d1)
     df_val_params.loc['Sample ID', 1] = df_param_indexed.loc['Sample ID', 1]
     df_val_params.loc['Label', 1] = df_param_indexed.loc['Sample ID', 1]
-
-   
 
     # Calculate time from mix
     # Remove for cc1 data exported with cc2

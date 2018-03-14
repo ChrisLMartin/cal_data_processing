@@ -20,7 +20,7 @@ output_excel_filename = 'CalorimetryData2018Automated.xlsx'
 output_excel_location = os.path.normpath(
         'S:/Current Projects/R&D/{}'.format(output_excel_filename))
 #output_excel_location = os.path.normpath(
-#        'C:/Users/christopher.martin/Documents/Python/cal_data/CalorimetryData2018Automated.xlsx')
+#        ''C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
 
 # Parse command line file arguments, used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
@@ -39,7 +39,6 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     # Tab delimited cal data file location for pandas to read
     # may be worth converting all cal files held in script directory,
     # or selecting only files that haven't been converted
-    # network directory "//ICAL8000/Users/Public/Documents/Calmetrix/CalCommander 2/Export/YYYY-MM/"
     sample_id = os.path.basename(input_filename).split('_')[0]
     print('Processing sample {}'.format(sample_id))
     # import data from file, and split parameters from recorded data.
@@ -107,7 +106,6 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
 #    cols = cols[0:1] + cols[-1:] + cols[1:-1] # For cc1 data exported with cc2
     df_val = df_val[cols]
 
-    param_sheet = 'Parameters'
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
     print('Adding excel sheet hyperlink to parameter row.')
     d2 = {1 : pd.Series(
@@ -116,6 +114,8 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     df_param_link = pd.DataFrame(d2)
     df_param_indexed_transpose = df_param_link.append(
             df_param_indexed).transpose()
+
+    param_sheet = 'Parameters'
 
     # try to open existing workbook: File not found -> create, add parameter sheet with header, add value sheet
     # if file is found, check if current sample exists; if not, write parameters without header, add value   

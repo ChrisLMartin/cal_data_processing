@@ -8,11 +8,13 @@ v1.01
 """
 
 import argparse
-from cal_data_import import append_df_to_excel, query_yes_no, multi_cal_files
+from cal_data_import import append_df_to_excel, query_yes_no
 from datetime import datetime
 import numpy as np
 import os
 import pandas as pd
+
+#pd.options.mode.chained_assignment = None
 
 # Excel workbook path and filename. If a filename only is called from command
 # line, output will be in the same directory as .txt files used as arguments.
@@ -28,11 +30,20 @@ args = parser.parse_args()
 files = list(vars(args).values())[0]
 
 
-def cal_data_to_excel(input_filename, output_filename=output_excel_location):
+def multi_cal_files(file_list, output_filename=output_excel_location):
+
+    for file in file_list:
+        main(file, output_filename)
+        
+def main(in_file, out_file):
+    s_id, df_p, df_v, df_vp = data_in(in_file)
+    df_p, df_v = efc_calcs(s_id, df_p, df_v)
+    write_to_excel(s_id, df_p, df_v, df_vp, out_file)
+
+def data_in(input_filename):
     # Tab delimited cal data file location for pandas to read
     # may be worth converting all cal files held in script directory,
     # or selecting only files that haven't been converted
-    # network directory "//ICAL8000/Users/Public/Documents/Calmetrix/CalCommander 2/Export/YYYY-MM/"
     sample_id = os.path.basename(input_filename).split('_')[0]
     print('Processing sample {}'.format(sample_id))
     # import data from file, and split parameters from recorded data.
@@ -51,9 +62,13 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
 #    Create small paramters for top of value sheet, to be used in excel graphs, per RG request 20180111
     d1 = {1 : pd.Series(['', ''], index=['Sample ID', 'Label'])}
     df_val_params = pd.DataFrame(d1)
-    df_val_params.loc['Sample ID', 1] = df_param_indexed.loc['Sample ID', 1]
-    df_val_params.loc['Label', 1] = df_param_indexed.loc['Sample ID', 1]
+    df_val_params.loc['Sample ID', 1] = sample_id
+    df_val_params.loc['Label', 1] = sample_id
 
+    return (sample_id, df_param_indexed, df_val, df_val_params)
+
+
+def efc_calcs(sample_id, df_param_indexed, df_val): 
     # Remove for cc1 data exported with cc2
     mix_start = datetime.strptime(
             df_param_indexed.loc['Mix Time', 1], "%d-%b-%Y %H:%M:%S")
@@ -71,7 +86,7 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     m_sample_scm = m_sample / (m_slag + m_fa + m_water + m_agg) * (m_slag + m_fa)
     
     # Set values to 0 prior to isothermal
-    # look from 1 hour to 15 hours
+    # look from min_search_start minutes to min_search_end minutes
     min_search_start = 60 
     min_search_end = 600
     idx_min = np.argmin(
@@ -79,8 +94,7 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     if idx_min >= 599:
         idx_min = 0
     df_val = df_val[idx_min:]
-    df_val['Heat,J'] = df_val['Heat,J'].apply(
-            lambda x: x - df_val['Heat,J'].values[0])
+    df_val['Heat,J'] = df_val['Heat,J'].apply(lambda x: x - df_val['Heat,J'].values[0])
     
     # add columns to df with power and energy per SCM
     # create time in decimal days for RG charts 20180111
@@ -90,7 +104,7 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     df_val['Heat/SCM,J/g'] = df_val['Heat,J'].values / m_sample_scm
     df_val['Tmix,s'] = df_val['Tlog,s'].values - time_difference
     df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400 # 60 * 60 * 24
-    df_val.drop('Tlog,s', axis=1, inplace=True) # remove for cc1 data exported with cc2
+    df_val = df_val.drop('Tlog,s', axis=1) # remove for cc1 data exported with cc2
 
     
 #    rearrange columns to place Tmixs first 
@@ -100,7 +114,6 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
 #    cols = cols[0:1] + cols[-1:] + cols[1:-1] # For cc1 data exported with cc2
     df_val = df_val[cols]
 
-    param_sheet = 'Parameters'
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
     print('Adding excel sheet hyperlink to parameter row.')
     d2 = {1 : pd.Series(
@@ -109,6 +122,17 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
     df_param_link = pd.DataFrame(d2)
     df_param_indexed_transpose = df_param_link.append(
             df_param_indexed).transpose()
+
+    return (df_param_indexed_transpose, df_val)
+
+
+def write_to_excel(sample_id, 
+                   df_param_indexed_transpose, 
+                   df_val, 
+                   df_val_params, 
+                   output_filename=output_excel_location):
+    
+    param_sheet = 'Parameters'
 
     # try to open existing workbook: File not found -> create, add parameter sheet with header, add value sheet
     # if file is found, check if current sample exists; if not, write parameters without header, add value   
@@ -129,7 +153,7 @@ def cal_data_to_excel(input_filename, output_filename=output_excel_location):
             print('Duration: {} seconds.'.format(duration.total_seconds()))
         else:
             #should add check that there aren't already multiple paramter rows with same id, which can
-            #occur if the filename and sample id in file don't match
+            #occur if the filename and sample id in file don't match (filename manually changed)
             idx_sample_id = df_existing_param.index[df_existing_param[
                     'Sample ID'] == sample_id][0]
             print(
