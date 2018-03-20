@@ -69,6 +69,9 @@ def data_in(input_filename):
 
 
 def efc_calcs(sample_id, df_param_indexed, df_val): 
+    df_param_indexed = df_param_indexed.copy()
+    df_val = df_val.copy()
+    
     # Remove for cc1 data exported with cc2
     mix_start = datetime.strptime(
             df_param_indexed.loc['Mix Time', 1], "%d-%b-%Y %H:%M:%S")
@@ -99,7 +102,6 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
     # add columns to df with power and energy per SCM
     # create time in decimal days for RG charts 20180111
     # header names require numbers for cc1 data exported with cc2
-    print('Applying calculations to values.')
     df_val['Power/SCM,W/g'] = df_val['Power,W'].values / m_sample_scm
     df_val['Heat/SCM,J/g'] = df_val['Heat,J'].values / m_sample_scm
     df_val['Tmix,s'] = df_val['Tlog,s'].values - time_difference
@@ -108,14 +110,12 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
 
     
 #    rearrange columns to place Tmixs first 
-    print('Rearranging values columns.')
     cols = df_val.columns.tolist()
     cols = cols[-2:] + cols[:-2]
 #    cols = cols[0:1] + cols[-1:] + cols[1:-1] # For cc1 data exported with cc2
     df_val = df_val[cols]
 
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
-    print('Adding excel sheet hyperlink to parameter row.')
     d2 = {1 : pd.Series(
             '=HYPERLINK("[{}]\'{}\'!B2", "Sheet")'.format(
                     output_excel_filename, sample_id), index=['Link'])}
@@ -141,7 +141,7 @@ def write_to_excel(sample_id,
         df_existing_param = pd.read_excel(output_filename, 
                                           sheet_name=param_sheet)
         if sample_id not in df_existing_param.values:
-            print('Writing parameters {}.'.format(sample_id))
+            print('Writing parameters {} ...'.format(sample_id), end=' ', flush=True)
             start_action = datetime.now()
             append_df_to_excel(output_filename, 
                                df_param_indexed_transpose, 
@@ -161,7 +161,7 @@ def write_to_excel(sample_id,
             overwrite_parameter = query_yes_no(
                     'Do you want to overwrite this parameter row?')
             if overwrite_parameter:
-                print('Overwriting parameters {}.'.format(sample_id))
+                print('Overwriting parameters {} ...'.format(sample_id), end=' ', flush=True)
                 start_action = datetime.now()
                 append_df_to_excel(output_filename, 
                                    df_param_indexed_transpose, 
@@ -173,7 +173,7 @@ def write_to_excel(sample_id,
                 duration = stop_action - start_action
                 print('Duration: {} seconds.'.format(duration.total_seconds()))
     except FileNotFoundError:
-        print('Creating workbook {}.'.format(output_filename))
+        print('Creating workbook {}'.format(output_filename))
         append_df_to_excel(output_filename, 
                            df_param_indexed_transpose, 
                            param_sheet, 
@@ -183,7 +183,7 @@ def write_to_excel(sample_id,
     wb = pd.ExcelFile(output_filename)
 
     if sample_id not in wb.sheet_names:
-        print('Writing values sheet {}.'.format(sample_id))
+        print('Writing values sheet {} ...'.format(sample_id), end=' ', flush=True)
         start_action = datetime.now()
         append_df_to_excel(output_filename, 
                            df_val_params, 
@@ -200,7 +200,7 @@ def write_to_excel(sample_id,
         print('A values sheet with Sample ID {} already exists in this workbook.'.format(sample_id))
         overwrite_sheet = query_yes_no('Do you want to overwrite this values sheet?')
         if overwrite_sheet:
-            print('Overwriting values sheet {}.'.format(sample_id))
+            print('Overwriting values sheet {} ...'.format(sample_id), end=' ', flush=True)
             start_action = datetime.now()
             append_df_to_excel(output_filename, 
                                df_val_params, 
