@@ -12,8 +12,9 @@ import pandas as pd
 
 
 def file_walk():
+    folder_name = '//ICAL8000/Users/Public/Documents/Calmetrix/CalCommander/Export'
     paths = (os.path.join(root, filename)
-            for root, _, filenames in os.walk('//ICAL8000/Users/Public/Documents/Calmetrix/CalCommander/Export')
+            for root, _, filenames in os.walk(folder_name)
             for filename in filenames)
     tti_dict = {}
     for path in paths:

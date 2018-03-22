@@ -23,6 +23,8 @@ TO DO:
     - refactor/combine write_to_excel() and append_df_to_excel()
     - refactor (potentially with dict of dfs for list of imported files in 
         multi_cal_files()) in order to reduce excel read/write occurences/times
+    - try/except for initial data import? 
+    - move to SQL database instead of excel (SQLite?)
 """
 
 import argparse
@@ -34,10 +36,10 @@ import sys
 
 
 output_excel_filename = 'CalorimetryData2018Automated.xlsx'
-output_excel_location = os.path.normpath(
-        'S:/Current Projects/R&D/{}'.format(output_excel_filename))
 #output_excel_location = os.path.normpath(
-#        'C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
+#        'S:/Current Projects/R&D/{}'.format(output_excel_filename))
+output_excel_location = os.path.normpath(
+        'C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
 
 # Used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
@@ -100,7 +102,12 @@ def data_in(input_filename):
             allow simpler excel graphing and annotation
     '''
     # Underscores in sample ID cause problems here
-    sample_id = os.path.basename(input_filename).split('_')[0] 
+    # Check to make sure using geopolymer sample naming system
+    sample_id = os.path.basename(input_filename).split('_')[0]
+    year = datetime.today().year
+    if not sample_id.startswith(str(year)):
+        print('Bad sample id (does not start with {}): {}'.format(year, sample_id))
+        sys.exit()
     print('Processing sample {}'.format(sample_id))
     # Encoding set to latin1 due to presence of degree symbol
     # newlines in CC2 logger details fields will cause issues

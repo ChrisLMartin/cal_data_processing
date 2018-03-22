@@ -13,14 +13,14 @@ from datetime import datetime
 import numpy as np
 import os
 import pandas as pd
-import sys
+#import sys
 
 # Excel workbook path and filename. If a filename only is called from command
 # line, output will be in the same directory as .txt files used as arguments.
 # Takes too long running on the network
 output_excel_filename = 'CalorimetryDataOPCAutomated.xlsx'
-output_excel_location = os.path.normpath('S:/Current Projects/R&D/{}'.format(output_excel_filename))
-#output_excel_location = os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename))
+#output_excel_location = os.path.normpath('S:/Current Projects/R&D/{}'.format(output_excel_filename))
+output_excel_location = os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename))
 
 # Parse command line file arguments, used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
@@ -86,11 +86,12 @@ def data_in(input_filename):
     # Underscores in sample ID cause problems here
     # Check to make sure using geopolymer sample naming system
     sample_id = os.path.basename(input_filename).split('_')[0]
+    '''TEST THIS
     year = datetime.today().year
-    year = str(year)[-2:]
-    if not sample_id.startswith(year):
+    if not sample_id.startswith(str(year)):
         print('Bad sample id (does not start with {}): {}'.format(year, sample_id))
         sys.exit()
+        '''
     print('Processing sample {}'.format(sample_id))
     # Encoding set to latin1 due to presence of degree symbol
     # newlines in CC2 logger details fields will cause issues
