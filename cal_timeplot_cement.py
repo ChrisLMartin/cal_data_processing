@@ -25,6 +25,8 @@ def multi_files(file_list):
     yslol = [v for v in ys.values()]
     colours = Category10[len(s_ids)]
     
+    
+    
     output_file("OPCCalPlots.html")
     
     p = figure(title="Full run", 
@@ -35,6 +37,30 @@ def multi_files(file_list):
     
     for (x, y, colr, leg) in zip(xslol, yslol, colours, s_ids):
         p.line(x, y, color = colr, legend=leg)
+    
+#    plot_w = 1000
+#    plot_h = 450
+#    
+#    p1 = figure(title="Full run",
+#                x_axis_label='Time (h)',
+#                y_axis_label='Specific Power (W/g cem mat)',
+#                width=plot_w,
+#                height=plot_h)
+#    
+#    for (t, pwr, colr, leg) in zip(tslol, pslol, colours, s_ids):
+#        p1.line(t, pwr, color=colr, legend=leg)
+#
+#    p2 = figure(title="Full run",
+#                x_axis_label='Time (h)',
+#                y_axis_label='Specific Energy (W/g cem mat)',
+#                width=plot_w,
+#                height=plot_h,
+#                x_range=p1.x_range)
+#   
+#    for (t, h, colr, leg) in zip(tslol, hslol, colours, s_ids):
+#        p2.line(t, h, color=colr, legend=leg)
+#    
+#    p = gridplot([[p1], [p2]])
     
     show(p)
     

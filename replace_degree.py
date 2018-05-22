@@ -10,8 +10,7 @@ import os
 
 def replace_degree_symbol():
     paths = (os.path.join(root, filename)
-            for root, _, filenames in os.walk(
-                    'C:/Users/christopher.martin/Documents/Python/cal_data/2018-03')
+            for root, _, filenames in os.walk('C:/Users/christopher.martin/Documents/Python/cal_data/2018-05')
             for filename in filenames)
     
     for path in paths:

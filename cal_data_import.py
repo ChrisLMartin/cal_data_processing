@@ -36,10 +36,10 @@ import sys
 
 
 output_excel_filename = 'CalorimetryData2018Automated.xlsx'
-#output_excel_location = os.path.normpath(
-#        'S:/Current Projects/R&D/{}'.format(output_excel_filename))
 output_excel_location = os.path.normpath(
-        'C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
+        'S:/Current Projects/R&D/{}'.format(output_excel_filename))
+# output_excel_location = os.path.normpath(
+#     'C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
 
 # Used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
@@ -49,7 +49,7 @@ files = list(vars(args).values())[0]
 
 
 def multi_cal_files(file_list, output_filename=output_excel_location):
-    '''
+    """
     Takes a [file_list] of Calmetrix cc2 export TSV files and calls data import 
     function on each file, with results saved to excel workbook at 
     [output_filename].
@@ -57,39 +57,41 @@ def multi_cal_files(file_list, output_filename=output_excel_location):
     Parameters:
         file_list: list of Calmetrix cc2 export TSV files, with filenames in 
             the form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
-            NOTE: DO NOT USE UNDERSCORES IN SAMPLE-ID
+            DO NOT USE UNDERSCORES IN SAMPLE-ID
         output_filename: excel workbook "*.xlsx". 
             Default: output_excel_location
     Returns: None
-    '''
+    """
     for file in file_list:
         main(file, output_filename)
-        
+
+
 def main(in_file, out_file):
-    '''
+    """
     Takes an [in_file] of type Calmetrix cc2 export TSV and runs data import, 
     with results saved to excel workbook at [out_file].
     
     Parameters:
         in_file: Calmetrix cc2 export TSV file, with filename in the form
             "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
-            NOTE: DO NOT USE UNDERSCORES IN SAMPLE-ID
+            DO NOT USE UNDERSCORES IN SAMPLE-ID
         out_file: excel workbook "[name].xlsx"
     Returns: None
-    '''
+    """
     s_id, df_p, df_v, df_vp = data_in(in_file)
     df_p, df_v = efc_calcs(s_id, df_p, df_v)
     write_to_excel(s_id, df_p, df_v, df_vp, out_file)
 
+
 def data_in(input_filename):
-    '''
+    """
     Reads data from [input_filename] of type Calmetrix cc2 export TSV into
     pandas DataFrames.
     
     Parameters:
         input_filename: Calmetrix cc2 export TSV file, with filename in the 
         form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
-        NOTE: DO NOT USE UNDERSCORES IN SAMPLE-ID
+        DO NOT USE UNDERSCORES IN SAMPLE-ID
     Returns:
         sample_id: id from [input_filename], all characters before first 
             underscore
@@ -100,7 +102,7 @@ def data_in(input_filename):
         df_val: df of all recorded time, power, and energy values
         df_val_params: df with sample id for first rows of excel sheets, to 
             allow simpler excel graphing and annotation
-    '''
+    """
     # Underscores in sample ID cause problems here
     # Check to make sure using geopolymer sample naming system
     sample_id = os.path.basename(input_filename).split('_')[0]
@@ -120,16 +122,16 @@ def data_in(input_filename):
 #    redundant due to parsing sample id from filename
 #    sample_id = df_param_indexed.loc['Sample ID', 1]
     
-    d1 = {1 : pd.Series(['', ''], index=['Sample ID', 'Label'])}
+    d1 = {1: pd.Series(['', ''], index=['Sample ID', 'Label'])}
     df_val_params = pd.DataFrame(d1)
     df_val_params.loc['Sample ID', 1] = sample_id
     df_val_params.loc['Label', 1] = sample_id
 
-    return (sample_id, df_param_indexed, df_val, df_val_params)
+    return sample_id, df_param_indexed, df_val, df_val_params
 
 
 def efc_calcs(sample_id, df_param_indexed, df_val):
-    '''
+    """
     Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
     data_in() and removes data prior to isothermal (first local minimum), 
     calculates specific power and energy values, and adds a hyperlink to the
@@ -144,7 +146,7 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
             for worksheet navigation
         df_val: df of calorimetry values, starting from isothermal (if found)
             with energy and power values per mass of binder
-    '''
+    """
     df_param_indexed = df_param_indexed.copy()
     df_val = df_val.copy()
     
@@ -179,8 +181,8 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
     df_val['Power/SCM,W/g'] = df_val['Power,W'].values / m_sample_scm
     df_val['Heat/SCM,J/g'] = df_val['Heat,J'].values / m_sample_scm
     df_val['Tmix,s'] = df_val['Tlog,s'].values - time_difference
-    df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400 # 60 * 60 * 24
-    df_val = df_val.drop('Tlog,s', axis=1) # remove for cc1 data exported with cc2
+    df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400  # 60 * 60 * 24
+    df_val = df_val.drop('Tlog,s', axis=1)  # remove for cc1 data exported with cc2
 
 #    rearrange columns to place Tmixs first 
     cols = df_val.columns.tolist()
@@ -196,7 +198,7 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
     df_param_indexed_transpose = df_param_link.append(
             df_param_indexed).transpose()
 
-    return (df_param_indexed_transpose, df_val)
+    return df_param_indexed_transpose, df_val
 
 
 def write_to_excel(sample_id, 
@@ -204,7 +206,7 @@ def write_to_excel(sample_id,
                    df_val, 
                    df_val_params, 
                    output_filename=output_excel_location):
-    '''
+    """
     Takes [sample_id] from data_in(), [df_param_indexed_transpose], [df_val], 
     and [df_val_params] from efc_calcs(), and [output_filename] from main().
     Writes [df_param_indexed_transpose] to [param_sheet], and [df_val] and 
@@ -220,7 +222,7 @@ def write_to_excel(sample_id,
         output_filename:  excel workbook "*.xlsx". 
             Default: output_excel_location
     Returns: None
-    '''
+    """
     param_sheet = 'Parameters'
 
     # try to open existing workbook: File not found -> create, add parameter sheet with header, add value sheet
@@ -241,8 +243,8 @@ def write_to_excel(sample_id,
             duration = stop_action - start_action
             print('Duration: {} seconds.'.format(duration.total_seconds()))
         else:
-            #should add check that there aren't already multiple paramter rows with same id, which can
-            #occur if the filename and sample id in file don't match (filename manually changed)
+            # should add check that there aren't already multiple paramter rows with same id, which can
+            # occur if the filename and sample id in file don't match (filename manually changed)
             idx_sample_id = df_existing_param.index[df_existing_param[
                     'Sample ID'] == sample_id][0]
             print(

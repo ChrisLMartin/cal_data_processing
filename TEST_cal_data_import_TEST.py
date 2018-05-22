@@ -14,7 +14,7 @@ import numpy as np
 import os
 import pandas as pd
 
-#pd.options.mode.chained_assignment = None
+# pd.options.mode.chained_assignment = None
 
 # Excel workbook path and filename. If a filename only is called from command
 # line, output will be in the same directory as .txt files used as arguments.
