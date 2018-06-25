@@ -173,6 +173,7 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
             df_val['Power,W'].values[min_search_start:min_search_end]) + min_search_start
     if idx_min >= 599:
         idx_min = 0
+#    idx_min = 0
     df_val = df_val[idx_min:]
     df_val['Heat,J'] = df_val['Heat,J'].apply(lambda x: x - df_val['Heat,J'].values[0])
     
@@ -180,7 +181,7 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
     # header names require numbers for cc1 data exported with cc2
     df_val['Power/SCM,W/g'] = df_val['Power,W'].values / m_sample_scm
     df_val['Heat/SCM,J/g'] = df_val['Heat,J'].values / m_sample_scm
-    df_val['Tmix,s'] = df_val['Tlog,s'].values - time_difference
+    df_val['Tmix,s'] = df_val['Tlog,s'].values + time_difference
     df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400  # 60 * 60 * 24
     df_val = df_val.drop('Tlog,s', axis=1)  # remove for cc1 data exported with cc2
 

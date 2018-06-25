@@ -162,7 +162,7 @@ def opc_calcs(sample_id, df_param_indexed, df_val):
     # header names require numbers for cc1 data exported with cc2
     df_val['Power/Cement,W/g'] = df_val['Power,W'].values / m_sample_cem
     df_val['Heat/Cement,J/g'] = df_val['Heat,J'].values / m_sample_cem
-    df_val['Tmix,s'] = df_val['Tlog,s'].values - time_difference
+    df_val['Tmix,s'] = df_val['Tlog,s'].values + time_difference
     df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400 # 60 * 60 * 24
     df_val.drop('Tlog,s', axis=1, inplace=True) # remove for cc1 data exported with cc2
     

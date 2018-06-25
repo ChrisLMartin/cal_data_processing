@@ -61,7 +61,9 @@ for k, v in d3.items():
         d4[k] = dupes
 
 # concatenate all the series into single dataframe
-result = pd.concat(d3, ignore_index=True)
+result = pd.concat(d3, names=['dict key', 'index val']) # index as tuple (multi-index)
+index = result.index.droplevel()
+result.set_index(index, inplace=True)
 
 writer = pd.ExcelWriter("mix_design_test.xlsx")
 result.to_excel(writer, "Sheet1")
