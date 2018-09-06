@@ -19,8 +19,8 @@ import sys
 # line, output will be in the same directory as .txt files used as arguments.
 # Takes too long running on the network
 output_excel_filename = 'CalorimetryDataOPCAutomated.xlsx'
-output_excel_location = os.path.normpath('S:/Current Projects/R&D/{}'.format(output_excel_filename))
-#output_excel_location = os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename))
+#output_excel_location = os.path.normpath('S:/Current Projects/R&D/{}'.format(output_excel_filename))
+output_excel_location = os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename))
 
 # Parse command line file arguments, used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
