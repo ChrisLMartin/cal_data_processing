@@ -4,14 +4,17 @@ Created on Fri Dec 22 16:47:14 2017
 
 @author: Christopher Martin
 
-v2.01
+v3.00
 
-Current use requires "replace_degree.py" to be run on folder containing 
-Calmetrix cc2 export TSV files to be imported (so that degree symbol is 
-replaced with "deg" preventing issues with Windows command prompt), then files 
-to be imported are selected (can be multiple files) and dragged and dropped 
-onto "cal_data_import.bat". Errors and warnings are written to 
+20180910
+
+Files to be imported are selected (can be multiple files) and dragged and 
+dropped onto "cal_data_import.bat". Errors and warnings are written to 
 "error_cal_data_import.txt".
+
+Previous use required "replace_degree.py" to be run on folder containing 
+Calmetrix cc2 export TSV files to be imported (so that degree symbol is 
+replaced with "deg" preventing issues with Windows command prompt), then 
 
 TO DO: 
     - search calmetrix export folder for new files that haven't been processed
@@ -35,59 +38,42 @@ import pandas as pd
 import sys
 
 
-output_excel_filename = 'CalorimetryData2018Automated.xlsx'
-output_excel_location = os.path.normpath(
-        'S:/Current Projects/R&D/{}'.format(output_excel_filename))
-#output_excel_location = os.path.normpath(
-#     'C:/Users/christopher.martin/Documents/Python/cal_data/{}'.format(output_excel_filename))
-
 # Used with .bat file for drag and drop
 parser = argparse.ArgumentParser()
 parser.add_argument('file', nargs='*')
 args = parser.parse_args()
 files = list(vars(args).values())[0]
 
+'''
+DEBUG LINE
+'''
+#files = [os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data/2018-09/20180904-01_23degC_Ch01_2018-09-04_10-14-37.txt')]
 
-def multi_cal_files(file_list, output_filename=output_excel_location):
+
+def main(file_list):
     """
     Takes a [file_list] of Calmetrix cc2 export TSV files and calls data import 
-    function on each file, with results saved to excel workbook at 
-    [output_filename].
+    functions on each file, with results saved to excel workbook.
     
     Parameters:
-        file_list: list of Calmetrix cc2 export TSV files, with filenames in 
+        file_list: List of Calmetrix cc2 export TSV files, with filenames in 
             the form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
             DO NOT USE UNDERSCORES IN SAMPLE-ID
-        output_filename: excel workbook "*.xlsx". 
-            Default: output_excel_location
     Returns: None
     """
     for file in file_list:
-        main(file, output_filename)
-
-
-def main(in_file, out_file):
-    """
-    Takes an [in_file] of type Calmetrix cc2 export TSV and runs data import, 
-    with results saved to excel workbook at [out_file].
+        s_id, s_t, out_file = check_name(file)
+        df_p, df_v, df_vp = data_in(file, s_id)
+        if s_t == "EFC":
+            m_bind = efc_calcs(df_p)
+        elif s_t == "OPC":
+            m_bind = opc_calcs(df_p)
+        df_v = tidy_val_df(df_v, m_bind)
+        df_p = tidy_param_df(s_id, df_p, out_file)
+        write_to_excel(s_id, df_p, df_v, df_vp, out_file)
     
-    Parameters:
-        in_file: Calmetrix cc2 export TSV file, with filename in the form
-            "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
-            DO NOT USE UNDERSCORES IN SAMPLE-ID
-        out_file: excel workbook "[name].xlsx"
-    Returns: None
+def check_name(input_filename):
     """
-    s_id, df_p, df_v, df_vp = data_in(in_file)
-    df_p, df_v = efc_calcs(s_id, df_p, df_v)
-    write_to_excel(s_id, df_p, df_v, df_vp, out_file)
-
-
-def data_in(input_filename):
-    """
-    Reads data from [input_filename] of type Calmetrix cc2 export TSV into
-    pandas DataFrames.
-    
     Parameters:
         input_filename: Calmetrix cc2 export TSV file, with filename in the 
         form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
@@ -95,6 +81,57 @@ def data_in(input_filename):
     Returns:
         sample_id: id from [input_filename], all characters before first 
             underscore
+        sample_type: EFC or OPC
+        output_excel_location: file location of excel output file
+    """
+     # Underscores in sample ID cause problems here
+    # Check to make sure using geopolymer sample naming system
+    sample_id = os.path.basename(input_filename).split('_')[0]
+    year = datetime.today().year
+    short_year = str(year)[-2:]
+    if sample_id.startswith(str(year)):
+        sample_type = "EFC"
+    elif sample_id.startswith(short_year):
+        sample_type = "OPC"
+    else:
+        print('Unexpected sample id (does not start with {} or {}): {}'.format(year, short_year, sample_id))
+        
+        valid = {"efc": "EFC", "e": "EFC", "ef": "EFC",
+                 "opc": "OPC", "op": "OPC", "o": "OPC"}
+        question = "Please enter a sample type."
+        prompt = " [efc/opc] "
+    
+        while True:
+            sys.stdout.write(question + prompt)
+            choice = input().lower()
+            if choice in valid:
+                sample_type = valid[choice]
+                break
+            else:
+                sys.stdout.write("Please respond with 'efc' or 'opc' "
+                                 "(or 'e' or 'o').\n")
+                
+    output_excel_filename = {"EFC": "CalorimetryData2018Automated.xlsx", 
+                             "OPC": "CalorimetryDataOPCAutomated.xlsx"}
+    output_excel_location = os.path.normpath(
+            'C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename[sample_type]))
+#        sys.exit()
+    
+    return sample_id, sample_type, output_excel_location
+
+
+def data_in(input_filename, sample_id):
+    """
+    Reads data from [input_filename] of type Calmetrix cc2 export TSV into
+    pandas DataFrames.
+    
+    Parameters:
+        input_filename: Calmetrix cc2 export TSV file, with filename in the 
+           form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
+           DO NOT USE UNDERSCORES IN SAMPLE-ID
+        sample_id: id from [input_filename], all characters before first 
+            underscore
+    Returns:
         df_param_indexed: long df of mix parameters, with parameter names as 
             index. If newlines have been used in any field of CC2 logger 
             details fields, there will be problems reading in to df_param and 
@@ -103,21 +140,16 @@ def data_in(input_filename):
         df_val_params: df with sample id for first rows of excel sheets, to 
             allow simpler excel graphing and annotation
     """
-    # Underscores in sample ID cause problems here
-    # Check to make sure using geopolymer sample naming system
-    sample_id = os.path.basename(input_filename).split('_')[0]
-    year = datetime.today().year
-    if not sample_id.startswith(str(year)):
-        print('Bad sample id (does not start with {}): {}'.format(year, sample_id))
-        sys.exit()
+   
     print('Processing sample {}'.format(sample_id))
     # Encoding set to latin1 due to presence of degree symbol
     # newlines in CC2 logger details fields will cause issues
+    header_rows = 30
     df_param = pd.read_table(input_filename, 
-                             nrows=29, 
+                             nrows=header_rows, 
                              encoding="latin1", 
                              header=None)
-    df_val = pd.read_table(input_filename, skiprows=29)
+    df_val = pd.read_table(input_filename, skiprows=header_rows)
     df_param_indexed = df_param.set_index(0)
 #    redundant due to parsing sample id from filename
 #    sample_id = df_param_indexed.loc['Sample ID', 1]
@@ -127,10 +159,10 @@ def data_in(input_filename):
     df_val_params.loc['Sample ID', 1] = sample_id
     df_val_params.loc['Label', 1] = sample_id
 
-    return sample_id, df_param_indexed, df_val, df_val_params
+    return df_param_indexed, df_val, df_val_params
 
 
-def efc_calcs(sample_id, df_param_indexed, df_val):
+def efc_calcs(df_param_indexed):
     """
     Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
     data_in() and removes data prior to isothermal (first local minimum), 
@@ -147,15 +179,17 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
         df_val: df of calorimetry values, starting from isothermal (if found)
             with energy and power values per mass of binder
     """
-    df_param_indexed = df_param_indexed.copy()
-    df_val = df_val.copy()
     
+    df_param_indexed = df_param_indexed.copy()
+    
+    ''' commented 20180210 after Calmetrix update
     # Remove for cc1 data exported with cc2
     mix_start = datetime.strptime(
             df_param_indexed.loc['Mix Time', 1], "%d-%b-%Y %H:%M:%S")
     log_start = datetime.strptime(
             df_param_indexed.loc['Start Time', 1], "%d-%b-%Y %H:%M:%S")
     time_difference = (log_start - mix_start).total_seconds()
+    '''
 
     # Calculate mass of binder in sample
     m_slag = float(df_param_indexed.loc['Suppl 1 Mass, g', 1])
@@ -165,48 +199,98 @@ def efc_calcs(sample_id, df_param_indexed, df_val):
     m_sample = float(df_param_indexed.loc['Sample Mass, g', 1])
     m_sample_scm = m_sample / (m_slag + m_fa + m_water + m_agg) * (m_slag + m_fa)
     
+    return m_sample_scm
+
+
+def opc_calcs(df_param_indexed):
+    '''
+    Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
+    data_in() and removes data prior to isothermal (first local minimum), 
+    calculates specific power and energy values, and adds a hyperlink to the
+    excel parameter row for easier navigation between sheets.
+    
+    Parameters:
+        sample_id: from data_in(), id of calorimetry sample
+        df_param_indexed: df of mix parameters, with parameter names as index
+        df_val: df of all recorded time, power, and energy values
+    Returns:
+        df_param_indexed_transpose: wide df of parameters, with excel hyperlink
+            for worksheet navigation
+        df_val: df of calorimetry values, starting from isothermal (if found)
+            with energy and power values per mass of binder
+    '''
+    
+    df_param_indexed = df_param_indexed.copy()
+    
+    '''  commented 20180210 after Calmetrix update
+    # Remove for cc1 data exported with cc2
+    mix_start = datetime.strptime(
+            df_param_indexed.loc['Mix Time', 1], "%d-%b-%Y %H:%M:%S")
+    log_start = datetime.strptime(
+            df_param_indexed.loc['Start Time', 1], "%d-%b-%Y %H:%M:%S")
+    time_difference = (log_start - mix_start).total_seconds()
+    '''
+    # select values from DataFrame and calculate mass of binder in sample
+    # may be worth checking if any of these values are 0 at some point in the future
+    
+    m_water = float(df_param_indexed.loc['Water Mass, g', 1])
+    m_cem = float(df_param_indexed.loc['Cement Mass, g', 1])
+    m_sample = float(df_param_indexed.loc['Sample Mass, g', 1])
+    m_sample_cem = m_sample / (m_cem + m_water) * m_cem
+    
+    return m_sample_cem
+
+    
+def tidy_val_df(df_val, m_sample_scm):
+    
+    
+    df_val = df_val.copy()
     # Set values to 0 prior to isothermal
     # look from min_search_start minutes to min_search_end minutes
     min_search_start = 60 
     min_search_end = 600
     idx_min = np.argmin(
-            df_val['Power,W'].values[min_search_start:min_search_end]) + min_search_start
+            df_val['Power1,W'].values[min_search_start:min_search_end]) + min_search_start
     if idx_min >= 599:
         idx_min = 0
 #    idx_min = 0
     df_val = df_val[idx_min:]
-    df_val['Heat,J'] = df_val['Heat,J'].apply(lambda x: x - df_val['Heat,J'].values[0])
+    df_val['Heat1,J'] = df_val['Heat1,J'].apply(lambda x: x - df_val['Heat1,J'].values[0])
     
     # create time in decimal days for RG charts 20180111
     # header names require numbers for cc1 data exported with cc2
-    df_val['Power/SCM,W/g'] = df_val['Power,W'].values / m_sample_scm
-    df_val['Heat/SCM,J/g'] = df_val['Heat,J'].values / m_sample_scm
-    df_val['Tmix,s'] = df_val['Tlog,s'].values + time_difference
-    df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400  # 60 * 60 * 24
-    df_val = df_val.drop('Tlog,s', axis=1)  # remove for cc1 data exported with cc2
+    df_val['Power/SCM,W/g'] = df_val['Power1,W'].values / m_sample_scm
+    df_val['Heat/SCM,J/g'] = df_val['Heat1,J'].values / m_sample_scm
+#    df_val['Tmix,s'] = df_val['Tlog,s'].values + time_difference
+    df_val['Tmix,days'] = df_val['Tmix1,s'].values / 86400  # 60 * 60 * 24
+#    df_val = df_val.drop('Tlog,s', axis=1)  # remove for cc1 data exported with cc2
 
 #    rearrange columns to place Tmixs first 
     cols = df_val.columns.tolist()
-    cols = cols[-2:] + cols[:-2]
+    cols = cols[0:1] + cols[-1:] + cols[1:-1]
 #    cols = cols[0:1] + cols[-1:] + cols[1:-1] # For cc1 data exported with cc2
     df_val = df_val[cols]
+    
+    return df_val
 
+def tidy_param_df(sample_id, df_param_indexed, out_file):
+    df_param_indexed = df_param_indexed.copy()
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
     d2 = {1 : pd.Series(
             '=HYPERLINK("[{}]\'{}\'!B2", "Sheet")'.format(
-                    output_excel_filename, sample_id), index=['Link'])}
+                    out_file, sample_id), index=['Link'])}
     df_param_link = pd.DataFrame(d2)
     df_param_indexed_transpose = df_param_link.append(
             df_param_indexed).transpose()
 
-    return df_param_indexed_transpose, df_val
+    return df_param_indexed_transpose
 
 
 def write_to_excel(sample_id, 
                    df_param_indexed_transpose, 
                    df_val, 
                    df_val_params, 
-                   output_filename=output_excel_location):
+                   output_filename):
     """
     Takes [sample_id] from data_in(), [df_param_indexed_transpose], [df_val], 
     and [df_val_params] from efc_calcs(), and [output_filename] from main().
@@ -403,4 +487,4 @@ def append_df_to_excel(filename,
             
 
 if __name__ == '__main__':
-    multi_cal_files(files)
+    main(files)

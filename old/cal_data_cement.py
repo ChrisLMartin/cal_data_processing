@@ -4,13 +4,15 @@ Created on Fri Dec 22 16:47:14 2017
 
 @author: christopher.martin
 
-v1.01
+v2.00
+
+20180910
+
 """
 
 import argparse
-from cal_data_import import append_df_to_excel
+from cal_data_import import append_df_to_excel, data_in, tidy_val_df
 from datetime import datetime
-import numpy as np
 import os
 import pandas as pd
 import sys
@@ -58,31 +60,24 @@ def main(in_file, out_file):
         out_file: excel workbook "[name].xlsx"
     Returns: None
     '''
-    s_id, df_p, df_v, df_vp = data_in(in_file)
-    df_p, df_v = opc_calcs(s_id, df_p, df_v)
+    s_id = check_name(in_file)
+    df_p, df_v, df_vp = data_in(in_file, s_id)
+    m_cem = opc_calcs(df_p)
+    df_p, df_v = tidy_df(s_id, df_p, df_v, m_cem)
     write_to_excel(s_id, df_p, df_v, df_vp, out_file)
     
-    
-def data_in(input_filename):
+def check_name(input_filename):
     '''
-    Reads data from [input_filename] of type Calmetrix cc2 export TSV into
-    pandas DataFrames.
-    
     Parameters:
         input_filename: Calmetrix cc2 export TSV file, with filename in the 
-        form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
-        NOTE: DO NOT USE UNDERSCORES IN SAMPLE-ID
+            form "/[sample-id]_[xx]degC_Ch[x]_[yyy-mm-dd]_[hh-mm-ss].txt"
+            NOTE: DO NOT USE UNDERSCORES IN SAMPLE-ID
+            
     Returns:
         sample_id: id from [input_filename], all characters before first 
             underscore
-        df_param_indexed: long df of mix parameters, with parameter names as 
-            index. If newlines have been used in any field of CC2 logger 
-            details fields, there will be problems reading in to df_param and 
-            df_val
-        df_val: df of all recorded time, power, and energy values
-        df_val_params: df with sample id for first rows of excel sheets, to 
-            allow simpler excel graphing and annotation
     '''
+    
     # Underscores in sample ID cause problems here
     # Check to make sure using geopolymer sample naming system
     sample_id = os.path.basename(input_filename).split('_')[0]
@@ -91,27 +86,11 @@ def data_in(input_filename):
     if not sample_id.startswith(year):
         print('Bad sample id (does not start with {}): {}'.format(year, sample_id))
         sys.exit()
-    print('Processing sample {}'.format(sample_id))
-    # Encoding set to latin1 due to presence of degree symbol
-    # newlines in CC2 logger details fields will cause issues
-    df_param = pd.read_table(input_filename, 
-                             nrows=29, 
-                             encoding="latin1", 
-                             header=None)
-    df_val = pd.read_table(input_filename, skiprows=29)
-    df_param_indexed = df_param.set_index(0)
-#    redundant due to parsing sample id from filename
-#    sample_id = df_param_indexed.loc['Sample ID', 1]
     
-    d1 = {1 : pd.Series(['', ''], index=['Sample ID', 'Label'])}
-    df_val_params = pd.DataFrame(d1)
-    df_val_params.loc['Sample ID', 1] = sample_id
-    df_val_params.loc['Label', 1] = sample_id
+    return sample_id 
+    
 
-    return (sample_id, df_param_indexed, df_val, df_val_params)
-
-
-def opc_calcs(sample_id, df_param_indexed, df_val):
+def opc_calcs(df_param_indexed):
     '''
     Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
     data_in() and removes data prior to isothermal (first local minimum), 
@@ -128,16 +107,17 @@ def opc_calcs(sample_id, df_param_indexed, df_val):
         df_val: df of calorimetry values, starting from isothermal (if found)
             with energy and power values per mass of binder
     '''
-    df_param_indexed = df_param_indexed.copy()
-    df_val = df_val.copy()
     
+    df_param_indexed = df_param_indexed.copy()
+    
+    '''  commented 20180210 after Calmetrix update
     # Remove for cc1 data exported with cc2
     mix_start = datetime.strptime(
             df_param_indexed.loc['Mix Time', 1], "%d-%b-%Y %H:%M:%S")
     log_start = datetime.strptime(
             df_param_indexed.loc['Start Time', 1], "%d-%b-%Y %H:%M:%S")
     time_difference = (log_start - mix_start).total_seconds()
-
+    '''
     # select values from DataFrame and calculate mass of binder in sample
     # may be worth checking if any of these values are 0 at some point in the future
     
@@ -146,43 +126,7 @@ def opc_calcs(sample_id, df_param_indexed, df_val):
     m_sample = float(df_param_indexed.loc['Sample Mass, g', 1])
     m_sample_cem = m_sample / (m_cem + m_water) * m_cem
     
-    # Set values to 0 prior to isothermal
-    # look from min_search_start minutes to min_search_end minutes
-    min_search_start = 60 
-    min_search_end = 600
-    idx_min = np.argmin(
-            df_val['Power,W'].values[min_search_start:min_search_end]) + min_search_start
-    if idx_min >= 599:
-        idx_min = 0
-    df_val = df_val[idx_min:]
-    df_val['Heat,J'] = df_val['Heat,J'].apply(lambda x: x - df_val['Heat,J'].values[0])
-    
-    # add columns to df with power and energy per cement
-    # create time in decimal days for RG charts 20180111
-    # header names require numbers for cc1 data exported with cc2
-    df_val['Power/Cement,W/g'] = df_val['Power,W'].values / m_sample_cem
-    df_val['Heat/Cement,J/g'] = df_val['Heat,J'].values / m_sample_cem
-    df_val['Tmix,s'] = df_val['Tlog,s'].values + time_difference
-    df_val['Tmix,days'] = df_val['Tmix,s'].values / 86400 # 60 * 60 * 24
-    df_val.drop('Tlog,s', axis=1, inplace=True) # remove for cc1 data exported with cc2
-    
-#    rearrange columns to place Tmixs first 
-    cols = df_val.columns.tolist()
-    cols = cols[-2:] + cols[:-2]
-#    cols = cols[0:1] + cols[-1:] + cols[1:-1] # For cc1 data exported with cc2
-    df_val = df_val[cols]
-
-
-#    sample_id = df_param_indexed.loc['Sample ID', 1]
-#    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
-    d2 = {1 : pd.Series(
-            '=HYPERLINK("[{}]\'{}\'!B2", "Sheet")'.format(
-                    output_excel_filename, sample_id), index=['Link'])}
-    df_param_link = pd.DataFrame(d2)
-    df_param_indexed_transpose = df_param_link.append(
-            df_param_indexed).transpose()
-    
-    return (df_param_indexed_transpose, df_val)
+    return m_sample_cem
 
 
 def write_to_excel(sample_id, 
