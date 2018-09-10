@@ -25,7 +25,7 @@ TO DO:
     - check if any efc_calcs() values are/should be zero
     - refactor/combine write_to_excel() and append_df_to_excel()
     - refactor (potentially with dict of dfs for list of imported files in 
-        multi_cal_files()) in order to reduce excel read/write occurences/times
+        main()) in order to reduce excel read/write occurences/times
     - try/except for initial data import? 
     - move to SQL database instead of excel (SQLite?)
 """
@@ -45,9 +45,11 @@ args = parser.parse_args()
 files = list(vars(args).values())[0]
 
 '''
-DEBUG LINE
+DEBUG FILE
 '''
-#files = [os.path.normpath('C:/Users/christopher.martin/Documents/Python/cal_data/2018-09/20180904-01_23degC_Ch01_2018-09-04_10-14-37.txt')]
+#files = [os.path.normpath(
+#        'C:/Users/christopher.martin/Documents/Python/cal_data/2018-09/'
+#        + '20180904-01_23degC_Ch01_2018-09-04_10-14-37.txt')]
 
 
 def main(file_list):
@@ -62,15 +64,15 @@ def main(file_list):
     Returns: None
     """
     for file in file_list:
-        s_id, s_t, out_file = check_name(file)
-        df_p, df_v, df_vp = data_in(file, s_id)
-        if s_t == "EFC":
+        sample_id, sample_type, out_filename, out_location = check_name(file)
+        df_p, df_v, df_vp = data_in(file, sample_id)
+        if sample_type == "EFC":
             m_bind = efc_calcs(df_p)
-        elif s_t == "OPC":
+        elif sample_type == "OPC":
             m_bind = opc_calcs(df_p)
         df_v = tidy_val_df(df_v, m_bind)
-        df_p = tidy_param_df(s_id, df_p, out_file)
-        write_to_excel(s_id, df_p, df_v, df_vp, out_file)
+        df_p = tidy_param_df(sample_id, df_p, out_filename)
+        write_to_excel(sample_id, df_p, df_v, df_vp, out_location)
     
 def check_name(input_filename):
     """
@@ -113,11 +115,12 @@ def check_name(input_filename):
                 
     output_excel_filename = {"EFC": "CalorimetryData2018Automated.xlsx", 
                              "OPC": "CalorimetryDataOPCAutomated.xlsx"}
+    out_filename = output_excel_filename[sample_type]
     output_excel_location = os.path.normpath(
-            'C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(output_excel_filename[sample_type]))
+            'C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(out_filename))
 #        sys.exit()
     
-    return sample_id, sample_type, output_excel_location
+    return sample_id, sample_type, out_filename, output_excel_location
 
 
 def data_in(input_filename, sample_id):
@@ -243,7 +246,6 @@ def opc_calcs(df_param_indexed):
     
 def tidy_val_df(df_val, m_sample_scm):
     
-    
     df_val = df_val.copy()
     # Set values to 0 prior to isothermal
     # look from min_search_start minutes to min_search_end minutes
@@ -273,17 +275,18 @@ def tidy_val_df(df_val, m_sample_scm):
     
     return df_val
 
-def tidy_param_df(sample_id, df_param_indexed, out_file):
+def tidy_param_df(sample_id, df_param_indexed, out_filename):
     df_param_indexed = df_param_indexed.copy()
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
     d2 = {1 : pd.Series(
             '=HYPERLINK("[{}]\'{}\'!B2", "Sheet")'.format(
-                    out_file, sample_id), index=['Link'])}
+                    out_filename, sample_id), index=['Link'])}
     df_param_link = pd.DataFrame(d2)
-    df_param_indexed_transpose = df_param_link.append(
+    df = df_param_link.append(
             df_param_indexed).transpose()
+    df = df.drop(columns='Sample Number')
 
-    return df_param_indexed_transpose
+    return df
 
 
 def write_to_excel(sample_id, 
