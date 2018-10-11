@@ -23,7 +23,7 @@ TO DO:
     - resolve problems with df_param and df_val caused by newlines in CC2 
         logger details fields
     - check if any efc_calcs() values are/should be zero
-    - refactor/combine write_to_excel() and append_df_to_excel()
+    - refactor write_to_excel() and append_df_to_excel()
     - refactor (potentially with dict of dfs for list of imported files in 
         main()) in order to reduce excel read/write occurences/times
     - try/except for initial data import? 
@@ -65,14 +65,14 @@ def main(file_list):
     """
     for file in file_list:
         sample_id, sample_type, out_filename, out_location = check_name(file)
-        df_p, df_v, df_vp = data_in(file, sample_id)
+        df_parameters, df_values, df_parameters_for_values = data_in(file, sample_id)
         if sample_type == "EFC":
-            m_bind = efc_calcs(df_p)
+            binder_mass = efc_calcs(df_parameters)
         elif sample_type == "OPC":
-            m_bind = opc_calcs(df_p)
-        df_v = tidy_val_df(df_v, m_bind)
-        df_p = tidy_param_df(sample_id, df_p, out_filename)
-        write_to_excel(sample_id, df_p, df_v, df_vp, out_location)
+            binder_mass = opc_calcs(df_parameters)
+        df_values = tidy_val_df(df_values, binder_mass)
+        df_parameters = tidy_param_df(sample_id, df_parameters, out_filename)
+        write_to_excel(sample_id, df_parameters, df_values, df_parameters_for_values, out_location)
     
 def check_name(input_filename):
     """
@@ -167,20 +167,12 @@ def data_in(input_filename, sample_id):
 
 def efc_calcs(df_param_indexed):
     """
-    Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
-    data_in() and removes data prior to isothermal (first local minimum), 
-    calculates specific power and energy values, and adds a hyperlink to the
-    excel parameter row for easier navigation between sheets.
+    Takes [df_param_indexed] from data_in() and calculates mass of EFC binder
     
     Parameters:
-        sample_id: from data_in(), id of calorimetry sample
         df_param_indexed: df of mix parameters, with parameter names as index
-        df_val: df of all recorded time, power, and energy values
     Returns:
-        df_param_indexed_transpose: wide df of parameters, with excel hyperlink
-            for worksheet navigation
-        df_val: df of calorimetry values, starting from isothermal (if found)
-            with energy and power values per mass of binder
+        m_sample_scm: mass of EFC binder in sample 
     """
     
     df_param_indexed = df_param_indexed.copy()
@@ -206,22 +198,14 @@ def efc_calcs(df_param_indexed):
 
 
 def opc_calcs(df_param_indexed):
-    '''
-    Takes [sample_id] and copies of [df_param_indexed] and [df_val] from 
-    data_in() and removes data prior to isothermal (first local minimum), 
-    calculates specific power and energy values, and adds a hyperlink to the
-    excel parameter row for easier navigation between sheets.
+    """
+     Takes [df_param_indexed] from data_in() and calculates mass of OPC binder
     
     Parameters:
-        sample_id: from data_in(), id of calorimetry sample
         df_param_indexed: df of mix parameters, with parameter names as index
-        df_val: df of all recorded time, power, and energy values
     Returns:
-        df_param_indexed_transpose: wide df of parameters, with excel hyperlink
-            for worksheet navigation
-        df_val: df of calorimetry values, starting from isothermal (if found)
-            with energy and power values per mass of binder
-    '''
+        m_sample_scm: mass of OPC binder in sample 
+    """
     
     df_param_indexed = df_param_indexed.copy()
     
@@ -245,6 +229,18 @@ def opc_calcs(df_param_indexed):
 
     
 def tidy_val_df(df_val, m_sample_scm):
+    """
+    Takes [df_val] from data_in() and [m_sample_scm] from efc_calcs() or 
+    opc_calcs() and removes data prior to isothermal (first local minimum) and 
+    calculates specific power and energy values.
+    
+    Parameters:
+        df_val: df of all recorded time, power, and energy values
+        m_sample_scm: mass of binder in sample 
+    Returns:
+        df_val: df of calorimetry values, starting from isothermal (if found)
+            with energy and power values per mass of binder
+    """
     
     df_val = df_val.copy()
     # Set values to 0 prior to isothermal
@@ -276,6 +272,20 @@ def tidy_val_df(df_val, m_sample_scm):
     return df_val
 
 def tidy_param_df(sample_id, df_param_indexed, out_filename):
+    """
+    Takes [sample_id] and copies of [df_param_indexed] and [out_filename] and 
+    adds a hyperlink to the excel parameter row for easier navigation between 
+    excel worksheets.
+    
+    Parameters:
+        sample_id: from data_in(), id of calorimetry sample
+        df_param_indexed: df of mix parameters, with parameter names as index
+        out_filename: filename and location to save dataframe
+    Returns:
+        df: wide df of parameters, with excel hyperlink
+            for worksheet navigation
+    """
+    
     df_param_indexed = df_param_indexed.copy()
 #    add link to each sheet in excel on paramters sheet, goes to label cell B2 20180111
     d2 = {1 : pd.Series(
