@@ -24,8 +24,8 @@ TO DO:
         logger details fields
     - check if any efc_calcs() values are/should be zero
     - refactor write_to_excel() and append_df_to_excel()
-    - refactor (potentially with dict of dfs for list of imported files in 
-        main()) in order to reduce excel read/write occurences/times
+    - refactor passing dict to write_to_excel() in order to reduce excel 
+        read/write occurences/times
     - try/except for initial data import? 
     - move to SQL database instead of excel (SQLite?)
 """
@@ -63,18 +63,27 @@ def main(file_list):
             DO NOT USE UNDERSCORES IN SAMPLE-ID
     Returns: None
     """
-    for file in file_list:
-        sample_id, sample_type, out_filename, out_location = check_name(file)
-        df_parameters, df_values, df_parameters_for_values = data_in(file, sample_id)
-        if sample_type == "EFC":
-            binder_mass = efc_calcs(df_parameters)
-        elif sample_type == "OPC":
-            binder_mass = opc_calcs(df_parameters)
-        df_values = tidy_val_df(df_values, binder_mass)
-        df_parameters = tidy_param_df(sample_id, df_parameters, out_filename)
-        write_to_excel(sample_id, df_parameters, df_values, df_parameters_for_values, out_location)
+    data_store = {}
     
-def check_name(input_filename):
+    for file in file_list:
+        sample_id = get_sample_id(file)
+        data_store[sample_id] = {}
+        data_store[sample_id]["sample_type"], data_store[sample_id]["out_filename"], data_store[sample_id]["out_location"] = check_name(file, sample_id)
+        data_store[sample_id]["df_parameters"], data_store[sample_id]["df_values"], data_store[sample_id]["df_parameters_for_values"] = data_in(file, sample_id)
+        if data_store[sample_id]["sample_type"] == "EFC":
+            binder_mass = efc_calcs(data_store[sample_id]["df_parameters"])
+        elif data_store[sample_id]["sample_type"] == "OPC":
+            binder_mass = opc_calcs(data_store[sample_id]["df_parameters"])
+        data_store[sample_id]["df_values"] = tidy_val_df(data_store[sample_id]["df_values"], binder_mass)
+        data_store[sample_id]["df_parameters"] = tidy_param_df(sample_id, data_store[sample_id]["df_parameters"], data_store[sample_id]["out_filename"])
+    for key, value in data_store.items():
+        write_to_excel(key, value["df_parameters"], value["df_values"], value["df_parameters_for_values"], value["out_location"])
+
+def get_sample_id(input_filename):
+    sample_id = os.path.basename(input_filename).split('_')[0]
+    return sample_id    
+
+def check_name(input_filename, sample_id):
     """
     Parameters:
         input_filename: Calmetrix cc2 export TSV file, with filename in the 
@@ -88,7 +97,6 @@ def check_name(input_filename):
     """
      # Underscores in sample ID cause problems here
     # Check to make sure using geopolymer sample naming system
-    sample_id = os.path.basename(input_filename).split('_')[0]
     year = datetime.today().year
     short_year = str(year)[-2:]
     if sample_id.startswith(str(year)):
@@ -120,7 +128,7 @@ def check_name(input_filename):
             'C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(out_filename))
 #        sys.exit()
     
-    return sample_id, sample_type, out_filename, output_excel_location
+    return sample_type, out_filename, output_excel_location
 
 
 def data_in(input_filename, sample_id):
