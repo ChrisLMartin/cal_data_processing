@@ -106,8 +106,12 @@ def check_name(input_filename, sample_id):
     else:
         print('Unexpected sample id (does not start with {} or {}): {}'.format(year, short_year, sample_id))
         
-        valid = {"efc": "EFC", "e": "EFC", "ef": "EFC",
-                 "opc": "OPC", "op": "OPC", "o": "OPC"}
+        valid = {"efc": "EFC", 
+                 "e": "EFC", 
+                 "ef": "EFC",
+                 "opc": "OPC", 
+                 "op": "OPC", 
+                 "o": "OPC"}
         question = "Please enter a sample type."
         prompt = " [efc/opc] "
     
@@ -121,8 +125,8 @@ def check_name(input_filename, sample_id):
                 sys.stdout.write("Please respond with 'efc' or 'opc' "
                                  "(or 'e' or 'o').\n")
                 
-    output_excel_filename = {"EFC": "CalorimetryData2018Automated.xlsx", 
-                             "OPC": "CalorimetryDataOPCAutomated.xlsx"}
+    output_excel_filename = {"EFC": "TEMPCalorimetryData2018Automated.xlsx", 
+                             "OPC": "TEMPCalorimetryDataOPCAutomated.xlsx"}
     out_filename = output_excel_filename[sample_type]
     output_excel_location = os.path.normpath(
             'C:/Users/christopher.martin/Documents/Python/cal_data_processing/{}'.format(out_filename))

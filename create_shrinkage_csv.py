@@ -28,8 +28,8 @@ df = df[["SpecimenID", "Date"]]
 df = df.drop_duplicates("SpecimenID")
 # Create array of test days
 days = [x for x in range(1, 15)] + \
-    [y for y in range(15, 29) if y % 2 == 0] + \
-    [z for z in range(29, 57) if z % 7 == 0]
+    [y for y in range(16, 29, 2)] + \
+    [z for z in range(35, 57, 7)]
 dates = [datetime.date.today() - datetime.timedelta(x) for x in days]
 # Filter for samples within previous 56 days
 df = df[df["Date"].isin(dates)]
